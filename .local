@@ -1,0 +1,2 @@
+export JWT_SECRET=E7v6FmuNGlvydcAWP9UMUzn8rr9v4D
+export DB_URL='user=realtime password=qscqwaszx dbname=realtime sslmode=disable'

@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="API Server (Development)." type="GoApplicationRunConfiguration" factoryName="Go Application" editBeforeRun="true" focusToolWindowBeforeRun="true">
+    <module name="RealTime" />
+    <working_directory value="$PROJECT_DIR$" />
+    <envs>
+      <env name="DB_URL" value="user=realtime password=qscqwaszx dbname=realtime sslmode=disable" />
+      <env name="JWT_SECRET" value="prince_raj" />
+    </envs>
+    <kind value="FILE" />
+    <package value="RealTime" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/api/main.go" />
+    <pty_enabled value="true" />
+    <method v="2" />
+  </configuration>
+</component>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Go WebSocket Test</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 20px;
+            background: #f9f9f9;
+        }
+        h1, h2, h3 { color: #333; }
+        input[type="text"] {
+            width: 300px; padding: 8px; margin-right: 10px;
+            border: 1px solid #ccc; border-radius: 4px;
+        }
+        button {
+            padding: 8px 12px; border: none; border-radius: 4px;
+            background: #007bff; color: white; cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+
+        #messages {
+            height: 300px; overflow-y: scroll; border: 1px solid #eee;
+            background: #fff; padding: 10px; margin-top: 10px; border-radius: 4px;
+        }
+
+        /* --- 🎨 Notification Center UI Fix --- */
+        #notification-center {
+            position: fixed; /* Fix it to the viewport */
+            top: 20px;
+            right: 20px;
+            width: 250px; /* Smaller width */
+            max-height: 300px; /* Limit height */
+            overflow-y: auto;
+            background: #333; /* Dark background for contrast */
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-size: 0.85em;
+            z-index: 100;
+        }
+
+        #notification-center h3 {
+            color: #fff;
+            margin-top: 0;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
+        }
+
+        .notification {
+            color: #eee;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+        }
+        /* --- End UI Fix --- */
+
+        .msg-public { color: #333; }
+        .msg-private { color: #800080; font-style: italic; }
+        .msg-system { color: #006400; font-weight: bold; }
+        .msg-error { color: #d90000; font-weight: bold; }
+        .msg-sent { color: #777; font-style: italic; }
+    </style>
+</head>
+<body>
+<div id="notification-center">
+    <h3>🔔 Notifications</h3>
+    <div id="notification-content">
+    </div>
+</div>
+<h1>WebSocket Test Client</h1>
+
+<div>
+    <label for="token">JWT Token:</label>
+    <input type="text" id="token" placeholder="Paste token from login..." style="width: 400px;">
+    <button onclick="connect()">Connect</button>
+</div>
+
+<h2 style="margin-bottom: 0;">Your User ID: <span id="my-id" style="color: #007bff;">(Not Connected)</span></h2>
+
+<hr>
+<h3 style="margin-bottom: 5px;">Chat Room</h3>
+<div id="messages"></div>
+
+<div>
+    <input type="text" id="input" placeholder="Type a message..." disabled>
+    <input type="text" id="target-id" placeholder="Target User ID (for private msg)" disabled>
+    <button onclick="sendMessage()" id="sendButton" disabled>Send</button>
+</div>
+
+<script>
+    // Get all DOM elements
+    const messagesDiv = document.getElementById("messages");
+    const notificationContent = document.getElementById("notification-content"); // <-- Updated
+    const inputField = document.getElementById("input");
+    const tokenField = document.getElementById("token");
+    const targetIdField = document.getElementById("target-id");
+    const sendButton = document.getElementById("sendButton");
+    const myIdSpan = document.getElementById("my-id");
+
+    let socket;
+
+    function connect() {
+        const token = tokenField.value;
+        if (!token) {
+            alert("Please paste your JWT token first.");
+            return;
+        }
+
+        socket = new WebSocket(`ws://192.168.0.112:8080/ws/chat?token=${token}`);
+
+        socket.onopen = () => {
+            logMessage("... Attempting to authenticate ...", "msg-system");
+        };
+
+        socket.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            console.log("Message received:", msg);
+
+            switch (msg.type) {
+                case "welcome":
+                    myIdSpan.textContent = msg.user_id;
+                    logMessage(`**CONNECTED & AUTHENTICATED** (User ID: ${msg.user_id})`, "msg-system");
+                    enableChat();
+                    break;
+
+                case "join":
+                    addNotification(`User ${msg.sender_id} joined.`);
+                    break;
+
+                case "leave":
+                    addNotification(`User ${msg.sender_id} left.`);
+                    break;
+
+                case "chat":
+                    if (msg.payload && msg.payload.content) {
+                        logMessage(`<b>${msg.sender_id}:</b> ${msg.payload.content}`, "msg-public");
+                    }
+                    break;
+
+                case "private":
+                    if (msg.payload && msg.payload.content) {
+                        logMessage(`<b>(Private from ${msg.sender_id}):</b> ${msg.payload.content}`, "msg-private");
+                    }
+                    break;
+
+                default:
+                    logMessage(`Received: ${event.data}`, "msg-public");
+            }
+        };
+
+        socket.onclose = (event) => {
+            logMessage(`**DISCONNECTED (${event.code})**`, "msg-error");
+            disableChat();
+        };
+
+        socket.onerror = (error) => {
+            logMessage("**CONNECTION ERROR** (Is the server running on port 8080?)", "msg-error");
+            disableChat();
+        };
+    }
+
+    function sendMessage() {
+        const message = inputField.value;
+        const targetID = targetIdField.value.trim();
+        if (!message || !socket) return;
+
+        let msgType = targetID ? "private" : "chat";
+        let msgLog = targetID ? `(Private to ${targetID}): ${message}` : `(Public): ${message}`;
+
+        const msg = {
+            type: msgType,
+            target_id: targetID || undefined,
+            payload: { content: message }
+        };
+
+        socket.send(JSON.stringify(msg));
+        logMessage(msgLog, "msg-sent");
+        inputField.value = '';
+    }
+
+    // Helper for notifications
+    function addNotification(message) {
+        // We now append to the inner div
+        notificationContent.innerHTML += `<p class="notification">${message}</p>`;
+        notificationContent.scrollTop = notificationContent.scrollHeight;
+    }
+
+    // Helper for main chat
+    function logMessage(message, className) {
+        messagesDiv.innerHTML += `<p class="${className}">${message}</p>`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function enableChat() {
+        inputField.disabled = false;
+        targetIdField.disabled = false;
+        sendButton.disabled = false;
+    }
+
+    function disableChat() {
+        inputField.disabled = true;
+        targetIdField.disabled = true;
+        sendButton.disabled = true;
+        myIdSpan.textContent = "(Not Connected)";
+    }
+
+    // Add Enter key support
+    inputField.addEventListener("keydown", (e) => (e.key === "Enter" && sendMessage()));
+    targetIdField.addEventListener("keydown", (e) => (e.key === "Enter" && sendMessage()));
+
+</script>
+</body>
+</html>
