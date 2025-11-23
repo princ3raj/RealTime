@@ -1,14 +1,13 @@
 package user
 
 import (
-	"RealTime/internal/transport/contracts"
 	"net/http"
 
 	"github.com/gorilla/mux"
 )
 
-func NewUserRouter(deps *contracts.AppDependencies) http.Handler {
-	api := NewUserAPI(deps)
+func NewUserRouter(userService ServiceProvider, cfg HandlerConfig) http.Handler {
+	api := NewUserAPI(userService, cfg)
 
 	router := mux.NewRouter()
 

@@ -3,7 +3,7 @@ package ws
 import (
 	"RealTime/internal/auth"
 	realtime2 "RealTime/internal/core/realtime"
-	"RealTime/internal/log"
+	"RealTime/internal/logger"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -28,7 +28,7 @@ func NewWsHandlerFactory(hub *realtime2.Hub, jwtSecret string) http.HandlerFunc 
 
 		userID, userName, err := auth.ValidateWsToken(tokenString, jwtSecret)
 		if err != nil {
-			log.Logger.Warn("Authentication failed for token",
+			logger.Logger.Warn("Authentication failed for token",
 				zap.Error(err),
 				zap.String("token_prefix", tokenString[:min(len(tokenString), 10)]),
 			)
@@ -38,7 +38,7 @@ func NewWsHandlerFactory(hub *realtime2.Hub, jwtSecret string) http.HandlerFunc 
 
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			log.Logger.Error("Upgrade failed", zap.Error(err))
+			logger.Logger.Error("Upgrade failed", zap.Error(err))
 			return
 		}
 

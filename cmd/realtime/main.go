@@ -2,7 +2,7 @@ package main
 
 import (
 	"RealTime/internal/config"
-	"RealTime/internal/log"
+	"RealTime/internal/logger"
 	"RealTime/internal/wiring"
 	"context"
 	"errors"
@@ -19,13 +19,13 @@ func main() {
 
 	cfg := config.LoadConfig()
 
-	log.InitLogger()
+	logger.InitLogger()
 	defer func(Logger *zap.Logger) {
 		err := Logger.Sync()
 		if err != nil {
-			log.Logger.Fatal("Logger sync failed", zap.Error(err))
+			logger.Logger.Fatal("Logger sync failed", zap.Error(err))
 		}
-	}(log.Logger)
+	}(logger.Logger)
 
 	wsApp, err := wiring.BuildWsServer(&cfg)
 	if err != nil {
@@ -45,23 +45,23 @@ func main() {
 	}
 
 	go func(logger *zap.Logger) {
-		log.Logger.Info("Server starting", zap.String("port", cfg.WSPort))
+		logger.Info("Server starting", zap.String("port", cfg.WSPort))
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Logger.Fatal("ListenAndServe failed", zap.Error(err), zap.String("port", cfg.WSPort))
+			logger.Fatal("ListenAndServe failed", zap.Error(err), zap.String("port", cfg.WSPort))
 		}
-	}(log.Logger)
+	}(logger.Logger)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Logger.Info("Server shutting down...")
+	logger.Logger.Info("Server shutting down...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Logger.Fatal("Server shutdown failed:", zap.Error(err))
+		logger.Logger.Fatal("Server shutdown failed:", zap.Error(err))
 	}
 
-	log.Logger.Info("Server exited gracefully")
+	logger.Logger.Info("Server exited gracefully")
 }

@@ -2,8 +2,8 @@ package main
 
 import (
 	"RealTime/internal/config"
-	"RealTime/internal/log"
-	"RealTime/internal/repository/postgres/store"
+	"RealTime/internal/logger"
+	"RealTime/internal/repository/postgres"
 	"RealTime/internal/wiring"
 	"context"
 	"database/sql"
@@ -20,30 +20,30 @@ func main() {
 
 	cfg := config.LoadConfig()
 
-	log.InitLogger()
+	logger.InitLogger()
 	defer func(Logger *zap.Logger) {
 		err := Logger.Sync()
 		if err != nil {
-			log.Logger.Error("Logger sync failed", zap.Error(err))
+			logger.Logger.Error("Logger sync failed", zap.Error(err))
 		}
-	}(log.Logger)
-	log.Logger.Info("Starting auth REST server...", zap.String("dbUrl", cfg.DBUrl))
-	db, err := store.InitDB(cfg.DBUrl)
+	}(logger.Logger)
+	logger.Logger.Info("Starting auth REST realtime...", zap.String("dbUrl", cfg.DBUrl))
+	db, err := postgres.InitDB(cfg.DBUrl)
 	if err != nil {
-		log.Logger.Fatal("Failed to initialize database", zap.Error(err))
+		logger.Logger.Fatal("Failed to initialize database", zap.Error(err))
 	}
 	defer func(db *sql.DB) {
 		err := db.Close()
 		if err != nil {
-			log.Logger.Error("Failed to close database connection", zap.Error(err))
+			logger.Logger.Error("Failed to close database connection", zap.Error(err))
 		}
 	}(db)
-	log.Logger.Info("Successfully connected to database")
+	logger.Logger.Info("Successfully connected to database")
 
 	app, err := wiring.BuildRestApi(db, &cfg)
 
 	if err != nil {
-		log.Logger.Fatal("Failed to build http transport", zap.Error(err))
+		logger.Logger.Fatal("Failed to build http transport", zap.Error(err))
 	}
 
 	server := &http.Server{
@@ -56,23 +56,23 @@ func main() {
 	}
 
 	go func() {
-		log.Logger.Info("Auth REST Server starting", zap.String("port", cfg.APIPort))
+		logger.Logger.Info("Auth REST Server starting", zap.String("port", cfg.APIPort))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Logger.Fatal("Auth server ListenAndServe failed", zap.Error(err))
+			logger.Logger.Fatal("Auth realtime ListenAndServe failed", zap.Error(err))
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Logger.Info("Auth server shutting down...")
+	logger.Logger.Info("Auth realtime shutting down...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Logger.Fatal("Auth server shutdown failed", zap.Error(err))
+		logger.Logger.Fatal("Auth realtime shutdown failed", zap.Error(err))
 	}
 
-	log.Logger.Info("Auth server exited gracefully")
+	logger.Logger.Info("Auth realtime exited gracefully")
 }

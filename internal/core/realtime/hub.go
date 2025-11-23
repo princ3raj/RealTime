@@ -1,7 +1,7 @@
 package realtime
 
 import (
-	"RealTime/internal/log"
+	"RealTime/internal/logger"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -36,7 +36,7 @@ func (h *Hub) Unregister(client *Client) {
 }
 
 func (h *Hub) Run() {
-	log.Logger.Info("Hub started")
+	logger.Logger.Info("Hub started")
 	for {
 		select {
 		case client := <-h.register:
@@ -53,7 +53,7 @@ func (h *Hub) BroadcastToAll(msg *Message) {
 
 	jsonMessage, err := json.Marshal(msg)
 	if err != nil {
-		log.Logger.Error("Error marshaling message for broadcast: %v", zap.Error(err))
+		logger.Logger.Error("Error marshaling message for broadcast: %v", zap.Error(err))
 		return
 	}
 
@@ -61,7 +61,7 @@ func (h *Hub) BroadcastToAll(msg *Message) {
 		select {
 		case client.send <- jsonMessage:
 		default:
-			log.Logger.Info("Client %s send channel blocked (full). Unregistering...", zap.String("client_id", id))
+			logger.Logger.Info("Client %s send channel blocked (full). Unregistering...", zap.String("client_id", id))
 			close(client.send)
 			delete(h.clients, id)
 		}
@@ -71,20 +71,20 @@ func (h *Hub) BroadcastToAll(msg *Message) {
 func (h *Hub) SendToClient(targetID string, msg *Message) {
 	client, ok := h.clients[targetID]
 	if !ok {
-		log.Logger.Info("Target client %s not found for private message.", zap.String("Target ID", targetID))
+		logger.Logger.Info("Target client %s not found for private message.", zap.String("Target ID", targetID))
 		return
 	}
 
 	jsonMessage, err := json.Marshal(msg)
 	if err != nil {
-		log.Logger.Info("Error marshaling message for private send to %s: %v", zap.String("Target ID", targetID), zap.Error(err))
+		logger.Logger.Info("Error marshaling message for private send to %s: %v", zap.String("Target ID", targetID), zap.Error(err))
 		return
 	}
 
 	select {
 	case client.send <- jsonMessage:
 	default:
-		log.Logger.Info("Target client %s send channel blocked. Unregistering...", zap.String("Target ID", targetID))
+		logger.Logger.Info("Target client %s send channel blocked. Unregistering...", zap.String("Target ID", targetID))
 		close(client.send)
 		delete(h.clients, targetID)
 	}
@@ -94,13 +94,13 @@ func (h *Hub) Broadcast(msg *Message) {
 	select {
 	case h.broadcast <- msg:
 	default:
-		log.Logger.Warn("Hub broadcast channel is saturated. Message dropped.", zap.String("message_type", msg.Type))
+		logger.Logger.Warn("Hub broadcast channel is saturated. Message dropped.", zap.String("message_type", msg.Type))
 	}
 }
 
 func handleRegisterEvent(client *Client, hub *Hub) {
 	hub.clients[client.ID] = client
-	log.Logger.Info("Client registered", zap.String("client_id", client.ID), zap.Int("total_clients", len(hub.clients)))
+	logger.Logger.Info("Client registered", zap.String("client_id", client.ID), zap.Int("total_clients", len(hub.clients)))
 
 	welcomeMsg := fmt.Sprintf(
 		`{"type": "welcome", "user_id": "%s", "user_name": "%s", "message": "Welcome!"}`,
@@ -116,7 +116,7 @@ func handleRegisterEvent(client *Client, hub *Hub) {
 	select {
 	case client.send <- []byte(welcomeMsg):
 	default:
-		log.Logger.Info("Client %s send channel blocked on register. Unregistering.", zap.String("client_id", client.ID))
+		logger.Logger.Info("Client %s send channel blocked on register. Unregistering.", zap.String("client_id", client.ID))
 
 		close(client.send)
 		delete(hub.clients, client.ID)
@@ -132,7 +132,7 @@ func handleUnregisterEvent(client *Client, hub *Hub) {
 			SenderID: client.ID,
 		}
 		hub.broadcast <- leaveMsg
-		log.Logger.Info("Client unregistered: %s. Total clients: %d", zap.String("client_id", client.ID), zap.Int("total_clients", len(hub.clients)))
+		logger.Logger.Info("Client unregistered: %s. Total clients: %d", zap.String("client_id", client.ID), zap.Int("total_clients", len(hub.clients)))
 	}
 }
 

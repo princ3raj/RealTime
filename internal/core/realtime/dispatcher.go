@@ -1,7 +1,7 @@
 package realtime
 
 import (
-	"RealTime/internal/log"
+	"RealTime/internal/logger"
 
 	"go.uber.org/zap"
 )
@@ -30,6 +30,6 @@ func (d *Dispatcher) Dispatch(hub *Hub, msg *Message) {
 	if handler, ok := d.handlers[msg.Type]; ok {
 		handler.Handle(hub, msg)
 	} else {
-		log.Logger.Warn("Unknown message type received.", zap.String("type", msg.Type))
+		logger.Logger.Warn("Unknown message type received.", zap.String("type", msg.Type))
 	}
 }

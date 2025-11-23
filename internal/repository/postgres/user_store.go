@@ -1,4 +1,4 @@
-package store
+package postgres
 
 import (
 	"RealTime/internal/domain/user" // <-- 1. FIXED: Import the correct domain package
