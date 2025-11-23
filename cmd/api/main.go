@@ -7,6 +7,7 @@ import (
 	"RealTime/internal/wiring"
 	"context"
 	"database/sql"
+	"errors"
 	"net/http"
 	"os"
 	"os/signal"
@@ -57,7 +58,7 @@ func main() {
 
 	go func() {
 		logger.Logger.Info("Auth REST Server starting", zap.String("port", cfg.APIPort))
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Logger.Fatal("Auth realtime ListenAndServe failed", zap.Error(err))
 		}
 	}()

@@ -11,7 +11,7 @@ require (
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/spf13/viper v1.21.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/crypto v0.44.0
+	golang.org/x/crypto v0.45.0
 )
 
 require (
