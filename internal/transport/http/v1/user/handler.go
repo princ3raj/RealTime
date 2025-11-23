@@ -1,11 +1,11 @@
 package user
 
 import (
-	"RealTime/internal/api/contracts"
 	"RealTime/internal/auth"
-	"RealTime/internal/config"      // <-- 1. IMPORTED correct config package
-	"RealTime/internal/domain/user" // <-- 2. IMPORTED domain package for errors
-	"RealTime/internal/log"         // <-- 3. IMPORTED log package
+	"RealTime/internal/config"
+	userservice "RealTime/internal/core/service"
+	"RealTime/internal/log"
+	"RealTime/internal/transport/contracts"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -25,8 +25,9 @@ type authRequest struct {
 }
 
 type authResponse struct {
-	Token  string `json:"token"`
-	UserID string `json:"user_id"`
+	Token    string `json:"token"`
+	UserID   string `json:"user_id"`
+	UserName string `json:"user_name"`
 }
 
 func NewUserAPI(deps *contracts.AppDependencies) *UserAPI {
@@ -47,7 +48,7 @@ func (a *UserAPI) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	u, err := a.UserService.Register(r.Context(), req.Username, req.Password)
 	if err != nil {
 		// --- 5. FIXED: Handle specific domain errors ---
-		if errors.Is(err, user.ErrUsernameTaken) {
+		if errors.Is(err, userservice.ErrUsernameTaken) {
 			http.Error(w, "Username is already taken", http.StatusConflict) // 409 Conflict
 			return
 		}
@@ -82,7 +83,7 @@ func (a *UserAPI) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	u, err := a.UserService.Login(r.Context(), req.Username, req.Password)
 	if err != nil {
-		if errors.Is(err, user.ErrInvalidCredentials) {
+		if errors.Is(err, userservice.ErrInvalidCredentials) {
 			http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 			return
 		}
@@ -95,6 +96,7 @@ func (a *UserAPI) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	token, err := auth.GenerateJWT(
 		u.ID.String(),
+		u.Username,
 		a.Config.JWTSecret,
 		a.Config.TokenTimeout,
 	)
@@ -105,8 +107,9 @@ func (a *UserAPI) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, authResponse{
-		Token:  token,
-		UserID: u.ID.String(),
+		Token:    token,
+		UserID:   u.ID.String(),
+		UserName: u.Username,
 	})
 }
 

@@ -1,8 +1,8 @@
 package ws
 
 import (
-	"RealTime/internal/app"
 	"RealTime/internal/auth"
+	realtime2 "RealTime/internal/core/realtime"
 	"RealTime/internal/log"
 	"net/http"
 
@@ -16,7 +16,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func NewWsHandlerFactory(hub *app.Hub, jwtSecret string) http.HandlerFunc {
+func NewWsHandlerFactory(hub *realtime2.Hub, jwtSecret string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -26,7 +26,7 @@ func NewWsHandlerFactory(hub *app.Hub, jwtSecret string) http.HandlerFunc {
 			return
 		}
 
-		userID, err := auth.ValidateWsToken(tokenString, jwtSecret)
+		userID, userName, err := auth.ValidateWsToken(tokenString, jwtSecret)
 		if err != nil {
 			log.Logger.Warn("Authentication failed for token",
 				zap.Error(err),
@@ -42,9 +42,10 @@ func NewWsHandlerFactory(hub *app.Hub, jwtSecret string) http.HandlerFunc {
 			return
 		}
 
-		client := app.NewClient(hub, conn, userID)
+		client := realtime2.NewClient(hub, conn, userID, userName)
 
 		hub.Register(client)
+		hub.SendNewsUpdates()
 
 		go client.WritePump()
 		client.ReadPump()

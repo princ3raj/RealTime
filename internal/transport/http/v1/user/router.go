@@ -1,7 +1,7 @@
 package user
 
 import (
-	"RealTime/internal/api/contracts"
+	"RealTime/internal/transport/contracts"
 	"net/http"
 
 	"github.com/gorilla/mux"

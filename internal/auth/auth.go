@@ -9,11 +9,12 @@ import (
 )
 
 type Claims struct {
-	UserID string `json:"user_id"`
+	UserID   string `json:"user_id"`
+	UserName string `json:"user_name"`
 	jwt.RegisteredClaims
 }
 
-func ValidateWsToken(tokenString string, secretKey string) (string, error) {
+func ValidateWsToken(tokenString string, secretKey string) (string, string, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -22,21 +23,22 @@ func ValidateWsToken(tokenString string, secretKey string) (string, error) {
 	})
 
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		return claims.UserID, nil
+		return claims.UserID, claims.UserName, nil
 	}
 
-	return "", errors.New("invalid token or claims")
+	return "", "", errors.New("invalid token or claims")
 }
 
-func GenerateJWT(userID string, secretKey string, tokenTimeout time.Duration) (string, error) {
+func GenerateJWT(userID string, userName string, secretKey string, tokenTimeout time.Duration) (string, error) {
 	expirationTime := time.Now().Add(tokenTimeout)
 
 	claims := &Claims{
-		UserID: userID,
+		UserID:   userID,
+		UserName: userName,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

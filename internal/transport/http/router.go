@@ -1,8 +1,9 @@
-package rest
+package http
 
 import (
-	"RealTime/internal/api/contracts"
-	"RealTime/internal/api/rest/user"
+	"RealTime/internal/transport/contracts"
+	"RealTime/internal/transport/http/v1/client"
+	"RealTime/internal/transport/http/v1/user"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -19,7 +20,7 @@ func NewRootRouter(deps *contracts.AppDependencies) http.Handler {
 		_, _ = w.Write([]byte("REST API OK"))
 	}).Methods("GET")
 
-	rootRouter.HandleFunc("/client", ClientHandler).Methods("GET")
+	rootRouter.HandleFunc("/client", rest.ClientHandler).Methods("GET")
 
 	return rootRouter
 }

@@ -1,4 +1,4 @@
-package app
+package realtime
 
 import (
 	"encoding/json"
@@ -16,10 +16,11 @@ const (
 )
 
 type Client struct {
-	hub  *Hub
-	conn *websocket.Conn
-	send chan []byte
-	ID   string
+	hub      *Hub
+	conn     *websocket.Conn
+	send     chan []byte
+	ID       string
+	UserName string
 }
 
 func (c *Client) WritePump() {
@@ -105,11 +106,12 @@ func (c *Client) ReadPump() {
 	}
 }
 
-func NewClient(h *Hub, c *websocket.Conn, id string) *Client {
+func NewClient(h *Hub, c *websocket.Conn, id string, userName string) *Client {
 	return &Client{
-		hub:  h,
-		conn: c,
-		send: make(chan []byte, 256),
-		ID:   id,
+		hub:      h,
+		conn:     c,
+		send:     make(chan []byte, 256),
+		ID:       id,
+		UserName: userName,
 	}
 }

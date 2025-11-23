@@ -8,7 +8,6 @@ import (
 	"fmt"
 )
 
-// 2. ADDED: Define a generic error for this package
 var ErrNotFound = errors.New("store: resource not found")
 
 // UserStore implements the user.Storer interface for PostgreSQL.

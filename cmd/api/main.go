@@ -3,7 +3,7 @@ package main
 import (
 	"RealTime/internal/config"
 	"RealTime/internal/log"
-	"RealTime/internal/store"
+	"RealTime/internal/repository/postgres/store"
 	"RealTime/internal/wiring"
 	"context"
 	"database/sql"
@@ -43,7 +43,7 @@ func main() {
 	app, err := wiring.BuildRestApi(db, &cfg)
 
 	if err != nil {
-		log.Logger.Fatal("Failed to build rest api", zap.Error(err))
+		log.Logger.Fatal("Failed to build http transport", zap.Error(err))
 	}
 
 	server := &http.Server{
